@@ -7,7 +7,6 @@ import { isMockPreBooked, todayISO } from '../lib/availability'
 import { PHONE_PATTERN, generateReference } from '../lib/validation'
 import { QrDemo } from '../components/QrDemo'
 import { PaymentProcessingModal } from '../components/PaymentProcessingModal'
-import { PrototypeDisclosure } from '../components/PrototypeDisclosure'
 
 interface Booking {
   id: string
@@ -165,8 +164,6 @@ export function Appointment() {
             </div>
           </div>
         </div>
-
-        <PrototypeDisclosure subject="booking" className="mt-6" />
 
         <div className="mt-8 flex flex-wrap justify-center gap-4">
           <button
