@@ -28,7 +28,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-white/10 py-4 text-center text-xs text-cream/50">
-        © {new Date().getFullYear()} Lavish Looks Salon — Demo prototype for academic presentation only.
+        © {new Date().getFullYear()} Lavish Looks Salon. All rights reserved.
       </div>
     </footer>
   )

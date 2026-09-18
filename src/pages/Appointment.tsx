@@ -4,8 +4,9 @@ import { services, timeSlots } from '../data/services'
 import { formatLKR } from '../lib/format'
 import { readJSON, writeJSON } from '../lib/storage'
 import { isMockPreBooked, todayISO } from '../lib/availability'
+import { PHONE_PATTERN, generateReference } from '../lib/validation'
 import { QrDemo } from '../components/QrDemo'
-import { DemoNotice } from '../components/DemoNotice'
+import { PrototypeDisclosure } from '../components/PrototypeDisclosure'
 
 interface Booking {
   id: string
@@ -18,13 +19,11 @@ interface Booking {
   price: number
   deposit: number
   remaining: number
-  bookedAt: string
 }
 
 const BOOKINGS_KEY = 'lavish-looks-bookings'
-const PHONE_PATTERN = /^(?:\+94|0)7\d{8}$/
 
-type Stage = 'form' | 'payment' | 'confirmation'
+type Stage = 'form' | 'payment' | 'preview'
 
 interface FormErrors {
   serviceId?: string
@@ -38,7 +37,8 @@ export function Appointment() {
   const [bookings, setBookings] = useState<Booking[]>(() => readJSON(BOOKINGS_KEY, []))
   const [stage, setStage] = useState<Stage>('form')
   const [processing, setProcessing] = useState(false)
-  const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null)
+  const [previewBooking, setPreviewBooking] = useState<Booking | null>(null)
+  const [reference, setReference] = useState('')
 
   const [serviceId, setServiceId] = useState('')
   const [date, setDate] = useState('')
@@ -64,6 +64,11 @@ export function Appointment() {
   const handleDateChange = (value: string) => {
     setDate(value)
     setTime('')
+    setErrors((prev) => ({ ...prev, date: undefined, time: undefined }))
+  }
+
+  const clearError = (field: keyof FormErrors) => {
+    setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev))
   }
 
   const validate = (): boolean => {
@@ -82,10 +87,11 @@ export function Appointment() {
   const handleProceedToPayment = (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate() || !selectedService) return
+    setReference(generateReference('APT'))
     setStage('payment')
   }
 
-  const handleSimulatePayment = () => {
+  const handleContinueFromPayment = () => {
     if (!selectedService) return
     setProcessing(true)
     window.setTimeout(() => {
@@ -100,15 +106,14 @@ export function Appointment() {
         price: selectedService.price,
         deposit,
         remaining,
-        bookedAt: new Date().toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' }),
       }
       const nextBookings = [...bookings, booking]
       setBookings(nextBookings)
       writeJSON(BOOKINGS_KEY, nextBookings)
-      setConfirmedBooking(booking)
+      setPreviewBooking(booking)
       setProcessing(false)
-      setStage('confirmation')
-    }, 900)
+      setStage('preview')
+    }, 600)
   }
 
   const resetForm = () => {
@@ -118,59 +123,62 @@ export function Appointment() {
     setName('')
     setPhone('')
     setErrors({})
-    setConfirmedBooking(null)
+    setPreviewBooking(null)
+    setReference('')
     setStage('form')
   }
 
-  if (stage === 'confirmation' && confirmedBooking) {
+  if (stage === 'preview' && previewBooking) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-8">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gold/10 text-3xl text-gold">
-          ✓
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl">Booking Preview</h1>
+          <span className="rounded-full bg-cream px-3 py-1 text-xs font-semibold uppercase tracking-wide text-burgundy">
+            Ref: {reference}
+          </span>
         </div>
-        <h1 className="mt-6 text-3xl">Appointment Confirmed</h1>
-        <p className="mt-2 text-mauve">We look forward to seeing you at Lavish Looks!</p>
+        <p className="mt-2 text-mauve">Please review your appointment details below.</p>
 
         <div className="mt-8 rounded-2xl border border-gold-light/40 bg-cream p-6 text-left">
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-mauve">Service</dt>
-              <dd className="font-semibold text-burgundy">{confirmedBooking.serviceName}</dd>
+              <dd className="font-semibold text-burgundy">{previewBooking.serviceName}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-mauve">Date</dt>
-              <dd className="font-semibold text-burgundy">{confirmedBooking.date}</dd>
+              <dd className="font-semibold text-burgundy">{previewBooking.date}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-mauve">Time</dt>
-              <dd className="font-semibold text-burgundy">{confirmedBooking.time}</dd>
+              <dd className="font-semibold text-burgundy">{previewBooking.time}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-mauve">Name</dt>
-              <dd className="font-semibold text-burgundy">{confirmedBooking.name}</dd>
+              <dd className="font-semibold text-burgundy">{previewBooking.name}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-mauve">Contact</dt>
-              <dd className="font-semibold text-burgundy">{confirmedBooking.phone}</dd>
+              <dd className="font-semibold text-burgundy">{previewBooking.phone}</dd>
             </div>
           </dl>
           <div className="mt-4 space-y-2 border-t border-gold-light/30 pt-4 text-sm">
             <div className="flex justify-between">
               <span>Service Price</span>
-              <span>{formatLKR(confirmedBooking.price)}</span>
+              <span>{formatLKR(previewBooking.price)}</span>
             </div>
             <div className="flex justify-between font-semibold text-gold">
-              <span>Advance Paid Today</span>
-              <span>{formatLKR(confirmedBooking.deposit)}</span>
+              <span>Advance Amount</span>
+              <span>{formatLKR(previewBooking.deposit)}</span>
             </div>
             <div className="flex justify-between">
               <span>Remaining Balance (at salon)</span>
-              <span>{formatLKR(confirmedBooking.remaining)}</span>
+              <span>{formatLKR(previewBooking.remaining)}</span>
             </div>
           </div>
         </div>
 
-        <DemoNotice className="mt-6" />
+        <PrototypeDisclosure subject="booking" className="mt-6" />
 
         <div className="mt-8 flex flex-wrap justify-center gap-4">
           <button
@@ -201,7 +209,7 @@ export function Appointment() {
         >
           ← Back to Details
         </button>
-        <h1 className="mt-4 text-3xl">Pay Advance to Confirm</h1>
+        <h1 className="mt-4 text-3xl">Advance Payment</h1>
         <div className="mt-6 rounded-2xl bg-cream p-6 text-sm">
           <div className="flex justify-between">
             <span>{selectedService.name}</span>
@@ -213,7 +221,7 @@ export function Appointment() {
               <span>{formatLKR(selectedService.price)}</span>
             </div>
             <div className="flex justify-between font-semibold text-gold">
-              <span>Advance Due Now ({Math.round(selectedService.depositPercent * 100)}%)</span>
+              <span>Advance Amount ({Math.round(selectedService.depositPercent * 100)}%)</span>
               <span>{formatLKR(deposit)}</span>
             </div>
             <div className="flex justify-between">
@@ -224,10 +232,10 @@ export function Appointment() {
         </div>
         <div className="mt-8">
           <QrDemo
-            amountLabel="Advance payment due"
+            amountLabel="Advance amount due"
             amount={deposit}
-            reference={`APPT-${selectedService.id}-${date}-${time}`.replace(/\s+/g, '')}
-            onSimulatePayment={handleSimulatePayment}
+            reference={reference}
+            onContinue={handleContinueFromPayment}
             busy={processing}
           />
         </div>
@@ -254,7 +262,10 @@ export function Appointment() {
           <select
             id="service"
             value={serviceId}
-            onChange={(e) => setServiceId(e.target.value)}
+            onChange={(e) => {
+              setServiceId(e.target.value)
+              clearError('serviceId')
+            }}
             aria-invalid={Boolean(errors.serviceId)}
             aria-describedby={errors.serviceId ? 'service-error' : undefined}
             className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm focus:border-burgundy focus:outline-none"
@@ -319,7 +330,10 @@ export function Appointment() {
               id="name"
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value)
+                clearError('name')
+              }}
               placeholder="e.g. Amaya Perera"
               aria-invalid={Boolean(errors.name)}
               aria-describedby={errors.name ? 'name-error' : undefined}
@@ -344,7 +358,10 @@ export function Appointment() {
                   key={t}
                   type="button"
                   disabled={taken}
-                  onClick={() => setTime(t)}
+                  onClick={() => {
+                    setTime(t)
+                    clearError('time')
+                  }}
                   aria-pressed={time === t}
                   aria-label={taken ? `${t}, already booked` : `Select ${t}`}
                   className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
@@ -375,7 +392,10 @@ export function Appointment() {
             id="phone"
             type="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value)
+              clearError('phone')
+            }}
             placeholder="e.g. 077 123 4567"
             aria-invalid={Boolean(errors.phone)}
             aria-describedby={errors.phone ? 'phone-error' : undefined}

@@ -24,7 +24,7 @@ function DecorativeQrGrid({ seed }: { seed: string }) {
       className="grid aspect-square w-full max-w-[220px] gap-[2px] rounded-lg bg-white p-3 shadow-inner"
       style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
       role="img"
-      aria-label="Demo Dialog Pay QR code placeholder — not a real payment code"
+      aria-label="Dialog Pay QR code graphic"
     >
       {cells.map((filled, i) => {
         const row = Math.floor(i / size)
@@ -47,9 +47,10 @@ interface QrDemoProps {
   amount: number
   payee?: string
   reference: string
-  onSimulatePayment: () => void
+  onContinue: () => void
   busy?: boolean
   readOnly?: boolean
+  actionLabel?: string
 }
 
 export function QrDemo({
@@ -57,9 +58,10 @@ export function QrDemo({
   amount,
   payee = 'Lavish Looks Salon',
   reference,
-  onSimulatePayment,
+  onContinue,
   busy = false,
   readOnly = false,
+  actionLabel = 'Continue',
 }: QrDemoProps) {
   return (
     <div className="rounded-2xl border border-gold-light/40 bg-cream p-6 sm:p-8">
@@ -78,20 +80,18 @@ export function QrDemo({
           <p>Pay to: {payee}</p>
           <p>Reference: {reference}</p>
         </div>
-        <p className="max-w-xs text-xs font-semibold uppercase tracking-wide text-gold">
-          Demo only — no real payment or booking is made
+        <p className="max-w-xs text-xs text-mauve">
+          Open your banking app and scan this code to pay with Dialog Pay QR.
         </p>
         <button
           type="button"
-          onClick={onSimulatePayment}
+          onClick={onContinue}
           disabled={busy || readOnly}
           className="mt-2 w-full rounded-full bg-gold px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-gold-light disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-10"
         >
-          {busy ? 'Processing…' : 'Simulate Payment'}
+          {busy ? 'Please wait…' : actionLabel}
         </button>
-        {readOnly && (
-          <p className="text-xs text-mauve">Try it on the Shop or Booking page.</p>
-        )}
+        {readOnly && <p className="text-xs text-mauve">Try it on the Shop or Booking page.</p>}
       </div>
     </div>
   )

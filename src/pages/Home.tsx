@@ -152,7 +152,7 @@ export function Home() {
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
-                Try the interactive demo on our Shop and Booking pages
+                Try it now on our Shop and Booking pages
               </li>
             </ul>
             <div className="mt-8 flex flex-wrap gap-4">
@@ -175,7 +175,7 @@ export function Home() {
               amountLabel="Sample amount due"
               amount={3500}
               reference="PREVIEW-0001"
-              onSimulatePayment={() => {}}
+              onContinue={() => {}}
               readOnly
             />
           </div>
