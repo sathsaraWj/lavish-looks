@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { HashRouter, Route, Routes } from 'react-router-dom'
 import { NavBar } from './components/NavBar'
 import { Footer } from './components/Footer'
 import { CartProvider } from './context/CartContext'
@@ -10,7 +10,7 @@ import { ScrollToTop } from './components/ScrollToTop'
 function App() {
   return (
     <CartProvider>
-      <BrowserRouter>
+      <HashRouter>
         <ScrollToTop />
         <div className="flex min-h-screen flex-col bg-white">
           <NavBar />
@@ -23,7 +23,7 @@ function App() {
           </main>
           <Footer />
         </div>
-      </BrowserRouter>
+      </HashRouter>
     </CartProvider>
   )
 }
