@@ -213,7 +213,7 @@ export function Home() {
               amountLabel="Sample amount due"
               amount={3500}
               reference="PREVIEW-0001"
-              onContinue={() => {}}
+              onScanned={() => {}}
               readOnly
             />
           </div>

@@ -5,10 +5,9 @@ interface QrDemoProps {
   amount: number
   payee?: string
   reference: string
-  onContinue: () => void
-  busy?: boolean
+  onScanned: () => void
+  disabled?: boolean
   readOnly?: boolean
-  actionLabel?: string
 }
 
 export function QrDemo({
@@ -16,10 +15,9 @@ export function QrDemo({
   amount,
   payee = 'Lavish Looks Salon',
   reference,
-  onContinue,
-  busy = false,
+  onScanned,
+  disabled = false,
   readOnly = false,
-  actionLabel = 'Continue',
 }: QrDemoProps) {
   return (
     <div className="rounded-2xl border border-gold-light/40 bg-cream p-6 sm:p-8">
@@ -47,11 +45,11 @@ export function QrDemo({
         </p>
         <button
           type="button"
-          onClick={onContinue}
-          disabled={busy || readOnly}
+          onClick={onScanned}
+          disabled={disabled || readOnly}
           className="mt-2 w-full rounded-full bg-gold px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-gold-light disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-10"
         >
-          {busy ? 'Please wait…' : actionLabel}
+          I&rsquo;ve Scanned the QR Code
         </button>
         {readOnly && <p className="text-xs text-mauve">Try it on the Shop or Booking page.</p>}
       </div>

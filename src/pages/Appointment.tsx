@@ -6,6 +6,7 @@ import { readJSON, writeJSON } from '../lib/storage'
 import { isMockPreBooked, todayISO } from '../lib/availability'
 import { PHONE_PATTERN, generateReference } from '../lib/validation'
 import { QrDemo } from '../components/QrDemo'
+import { PaymentProcessingModal } from '../components/PaymentProcessingModal'
 import { PrototypeDisclosure } from '../components/PrototypeDisclosure'
 
 interface Booking {
@@ -14,7 +15,6 @@ interface Booking {
   serviceName: string
   date: string
   time: string
-  name: string
   phone: string
   price: number
   deposit: number
@@ -29,21 +29,19 @@ interface FormErrors {
   serviceId?: string
   date?: string
   time?: string
-  name?: string
   phone?: string
 }
 
 export function Appointment() {
   const [bookings, setBookings] = useState<Booking[]>(() => readJSON(BOOKINGS_KEY, []))
   const [stage, setStage] = useState<Stage>('form')
-  const [processing, setProcessing] = useState(false)
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
   const [previewBooking, setPreviewBooking] = useState<Booking | null>(null)
   const [reference, setReference] = useState('')
 
   const [serviceId, setServiceId] = useState('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
-  const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
 
@@ -77,7 +75,6 @@ export function Appointment() {
     if (!date) next.date = 'Please select a date.'
     else if (date < min) next.date = 'Please choose today or a future date.'
     if (!time) next.time = 'Please select an available time slot.'
-    if (!name.trim() || name.trim().length < 2) next.name = 'Please enter your full name.'
     if (!PHONE_PATTERN.test(phone.trim()))
       next.phone = 'Enter a valid Sri Lankan mobile number, e.g. 077 123 4567.'
     setErrors(next)
@@ -91,36 +88,31 @@ export function Appointment() {
     setStage('payment')
   }
 
-  const handleContinueFromPayment = () => {
+  const handlePaymentPreviewDone = () => {
     if (!selectedService) return
-    setProcessing(true)
-    window.setTimeout(() => {
-      const booking: Booking = {
-        id: `${Date.now()}`,
-        serviceId: selectedService.id,
-        serviceName: selectedService.name,
-        date,
-        time,
-        name: name.trim(),
-        phone: phone.trim(),
-        price: selectedService.price,
-        deposit,
-        remaining,
-      }
-      const nextBookings = [...bookings, booking]
-      setBookings(nextBookings)
-      writeJSON(BOOKINGS_KEY, nextBookings)
-      setPreviewBooking(booking)
-      setProcessing(false)
-      setStage('preview')
-    }, 600)
+    setPaymentModalOpen(false)
+    const booking: Booking = {
+      id: `${Date.now()}`,
+      serviceId: selectedService.id,
+      serviceName: selectedService.name,
+      date,
+      time,
+      phone: phone.trim(),
+      price: selectedService.price,
+      deposit,
+      remaining,
+    }
+    const nextBookings = [...bookings, booking]
+    setBookings(nextBookings)
+    writeJSON(BOOKINGS_KEY, nextBookings)
+    setPreviewBooking(booking)
+    setStage('preview')
   }
 
   const resetForm = () => {
     setServiceId('')
     setDate('')
     setTime('')
-    setName('')
     setPhone('')
     setErrors({})
     setPreviewBooking(null)
@@ -154,11 +146,7 @@ export function Appointment() {
               <dd className="font-semibold text-burgundy">{previewBooking.time}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-mauve">Name</dt>
-              <dd className="font-semibold text-burgundy">{previewBooking.name}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-mauve">Contact</dt>
+              <dt className="text-mauve">Dialog Mobile Number</dt>
               <dd className="font-semibold text-burgundy">{previewBooking.phone}</dd>
             </div>
           </dl>
@@ -235,10 +223,15 @@ export function Appointment() {
             amountLabel="Advance amount due"
             amount={deposit}
             reference={reference}
-            onContinue={handleContinueFromPayment}
-            busy={processing}
+            onScanned={() => setPaymentModalOpen(true)}
+            disabled={paymentModalOpen}
           />
         </div>
+        <PaymentProcessingModal
+          open={paymentModalOpen}
+          amount={deposit}
+          onDone={handlePaymentPreviewDone}
+        />
       </div>
     )
   }
@@ -300,51 +293,25 @@ export function Appointment() {
           )}
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div>
-            <label htmlFor="date" className="block text-sm font-semibold text-burgundy">
-              Date
-            </label>
-            <input
-              id="date"
-              type="date"
-              min={min}
-              value={date}
-              onChange={(e) => handleDateChange(e.target.value)}
-              aria-invalid={Boolean(errors.date)}
-              aria-describedby={errors.date ? 'date-error' : undefined}
-              className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm focus:border-burgundy focus:outline-none"
-            />
-            {errors.date && (
-              <p id="date-error" className="mt-1 text-xs text-red-600">
-                {errors.date}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="name" className="block text-sm font-semibold text-burgundy">
-              Full Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value)
-                clearError('name')
-              }}
-              placeholder="e.g. Amaya Perera"
-              aria-invalid={Boolean(errors.name)}
-              aria-describedby={errors.name ? 'name-error' : undefined}
-              className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm focus:border-burgundy focus:outline-none"
-            />
-            {errors.name && (
-              <p id="name-error" className="mt-1 text-xs text-red-600">
-                {errors.name}
-              </p>
-            )}
-          </div>
+        <div>
+          <label htmlFor="date" className="block text-sm font-semibold text-burgundy">
+            Date
+          </label>
+          <input
+            id="date"
+            type="date"
+            min={min}
+            value={date}
+            onChange={(e) => handleDateChange(e.target.value)}
+            aria-invalid={Boolean(errors.date)}
+            aria-describedby={errors.date ? 'date-error' : undefined}
+            className="mt-2 w-full max-w-xs rounded-xl border border-black/10 bg-white px-4 py-3 text-sm focus:border-burgundy focus:outline-none"
+          />
+          {errors.date && (
+            <p id="date-error" className="mt-1 text-xs text-red-600">
+              {errors.date}
+            </p>
+          )}
         </div>
 
         <fieldset>
@@ -386,7 +353,7 @@ export function Appointment() {
 
         <div>
           <label htmlFor="phone" className="block text-sm font-semibold text-burgundy">
-            Contact Number
+            Dialog mobile number
           </label>
           <input
             id="phone"
@@ -398,12 +365,16 @@ export function Appointment() {
             }}
             placeholder="e.g. 077 123 4567"
             aria-invalid={Boolean(errors.phone)}
-            aria-describedby={errors.phone ? 'phone-error' : undefined}
+            aria-describedby={errors.phone ? 'phone-error' : 'phone-hint'}
             className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm focus:border-burgundy focus:outline-none"
           />
-          {errors.phone && (
+          {errors.phone ? (
             <p id="phone-error" className="mt-1 text-xs text-red-600">
               {errors.phone}
+            </p>
+          ) : (
+            <p id="phone-hint" className="mt-1 text-xs text-mauve">
+              Used only to complete your payment through the Dialog Pay QR flow.
             </p>
           )}
         </div>

@@ -7,6 +7,7 @@ import { formatLKR } from '../lib/format'
 import { EMAIL_PATTERN, PHONE_PATTERN, POSTAL_CODE_PATTERN, generateReference } from '../lib/validation'
 import { ProductCard } from '../components/ProductCard'
 import { QrDemo } from '../components/QrDemo'
+import { PaymentProcessingModal } from '../components/PaymentProcessingModal'
 import { PrototypeDisclosure } from '../components/PrototypeDisclosure'
 
 const categoryTabs = ['All', ...productCategories] as const
@@ -63,7 +64,7 @@ export function Products() {
   const [customer, setCustomer] = useState<CustomerDetails>(emptyCustomer)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
   const [errors, setErrors] = useState<FormErrors>({})
-  const [processing, setProcessing] = useState(false)
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
   const [reference, setReference] = useState('')
   const [order, setOrder] = useState<OrderSummary | null>(null)
 
@@ -140,13 +141,10 @@ export function Products() {
     }
   }
 
-  const handleContinueFromPayment = () => {
-    setProcessing(true)
-    window.setTimeout(() => {
-      setOrder(buildOrder('qr', reference))
-      setProcessing(false)
-      setStage('preview')
-    }, 600)
+  const handlePaymentPreviewDone = () => {
+    setPaymentModalOpen(false)
+    setOrder(buildOrder('qr', reference))
+    setStage('preview')
   }
 
   const startNewOrder = () => {
@@ -260,10 +258,15 @@ export function Products() {
             amountLabel="Total due"
             amount={total}
             reference={reference}
-            onContinue={handleContinueFromPayment}
-            busy={processing}
+            onScanned={() => setPaymentModalOpen(true)}
+            disabled={paymentModalOpen}
           />
         </div>
+        <PaymentProcessingModal
+          open={paymentModalOpen}
+          amount={total}
+          onDone={handlePaymentPreviewDone}
+        />
       </div>
     )
   }
