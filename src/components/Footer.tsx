@@ -11,7 +11,7 @@ export function Footer() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-gold-light">Visit Us</p>
           <address className="mt-2 not-italic text-sm text-cream/70">
-            No. 24, Highlevel Road
+            No. 203/1, Puwakwaththa Road
             <br />
             Meegoda, Sri Lanka
             <br />
@@ -21,7 +21,7 @@ export function Footer() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-gold-light">Contact</p>
           <p className="mt-2 text-sm text-cream/70">
-            +94 71 234 5678
+            075 299 4812
             <br />
             hello@lavishlooks.lk
           </p>

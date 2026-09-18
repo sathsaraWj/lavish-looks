@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom'
 import { QrDemo } from '../components/QrDemo'
+import storefrontPhoto from '../assets/salon/storefront.jpg'
+import vanityStationPhoto from '../assets/salon/vanity-station.jpg'
+import interiorPhoto from '../assets/salon/interior.jpg'
 
 const serviceHighlights = [
   {
@@ -34,11 +37,7 @@ export function Home() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img
-            src="https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=1600&q=80"
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <img src={interiorPhoto} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-burgundy/90 via-burgundy/70 to-burgundy/40" />
         </div>
         <div className="relative mx-auto flex min-h-[560px] max-w-6xl flex-col justify-center px-4 py-24 sm:px-8">
@@ -121,6 +120,45 @@ export function Home() {
               Book an Appointment
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Visit Our Salon gallery */}
+      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-8">
+        <div className="text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gold">Visit Us</p>
+          <h2 className="mt-4 text-3xl sm:text-4xl">Step Inside Lavish Looks</h2>
+          <p className="mx-auto mt-4 max-w-xl text-balance">
+            Find us in Meegoda for a relaxed, elegant space designed around you.
+          </p>
+        </div>
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr] lg:grid-rows-2">
+          <div className="overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5 lg:row-span-2">
+            <img
+              src={interiorPhoto}
+              alt="Lavish Looks salon interior with styling chairs and a lit vanity mirror"
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <div className="overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5">
+            <img
+              src={storefrontPhoto}
+              alt="Lavish Looks salon storefront signage in Meegoda"
+              className="h-56 w-full object-cover sm:h-full"
+            />
+          </div>
+          <div className="overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5">
+            <img
+              src={vanityStationPhoto}
+              alt="Makeup and styling station with brushes and cosmetics"
+              className="h-56 w-full object-cover sm:h-full"
+            />
+          </div>
+        </div>
+        <div className="mt-10 text-center">
+          <p className="text-sm text-mauve">
+            No. 203/1, Puwakwaththa Road, Meegoda · Call us on 075 299 4812
+          </p>
         </div>
       </section>
 
