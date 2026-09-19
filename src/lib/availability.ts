@@ -1,7 +1,7 @@
 import { hashString } from './storage'
 
 /**
- * Deterministic mock "already booked" slots so the demo shows a realistic,
+ * Deterministic mock "already booked" slots so the booking page shows a realistic,
  * partially-full schedule without any backend. Same date+time always
  * produces the same result.
  */

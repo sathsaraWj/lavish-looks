@@ -12,7 +12,7 @@ export function writeJSON<T>(key: string, value: T): void {
   try {
     window.localStorage.setItem(key, JSON.stringify(value))
   } catch {
-    // localStorage unavailable (private browsing, quota, etc.) — demo state just won't persist
+    // localStorage unavailable (private browsing, quota, etc.) — saved state just won't persist
   }
 }
 

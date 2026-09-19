@@ -1,6 +1,6 @@
 import dialogPayQr from '../assets/payment/dialog-pay-qr.jpg'
 
-interface QrDemoProps {
+interface DialogPayQrProps {
   amountLabel: string
   amount: number
   payee?: string
@@ -10,7 +10,7 @@ interface QrDemoProps {
   readOnly?: boolean
 }
 
-export function QrDemo({
+export function DialogPayQr({
   amountLabel,
   amount,
   payee = 'Lavish Looks Salon',
@@ -18,7 +18,7 @@ export function QrDemo({
   onScanned,
   disabled = false,
   readOnly = false,
-}: QrDemoProps) {
+}: Readonly<DialogPayQrProps>) {
   return (
     <div className="rounded-2xl border border-gold-light/40 bg-cream p-6 sm:p-8">
       <div className="flex flex-col items-center gap-4 text-center">
@@ -49,7 +49,7 @@ export function QrDemo({
           disabled={disabled || readOnly}
           className="mt-2 w-full rounded-full bg-gold px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-gold-light disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-10"
         >
-          I&rsquo;ve Scanned the QR Code
+          I&rsquo;ve scanned and paid
         </button>
         {readOnly && <p className="text-xs text-mauve">Try it on the Shop or Booking page.</p>}
       </div>

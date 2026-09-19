@@ -4,8 +4,11 @@ import { services, timeSlots } from '../data/services'
 import { formatLKR } from '../lib/format'
 import { readJSON, writeJSON } from '../lib/storage'
 import { isMockPreBooked, todayISO } from '../lib/availability'
-import { PHONE_PATTERN, generateReference } from '../lib/validation'
-import { QrDemo } from '../components/QrDemo'
+import { formatMobile } from '../lib/otp'
+import { generateReference, normalizeSriLankanMobile } from '../lib/validation'
+import { useStageFocus } from '../lib/useStageFocus'
+import { DialogPayQr } from '../components/DialogPayQr'
+import { MobileVerification } from '../components/MobileVerification'
 import { PaymentProcessingModal } from '../components/PaymentProcessingModal'
 
 interface Booking {
@@ -22,13 +25,12 @@ interface Booking {
 
 const BOOKINGS_KEY = 'lavish-looks-bookings'
 
-type Stage = 'form' | 'payment' | 'preview'
+type Stage = 'form' | 'verify' | 'payment' | 'preview'
 
 interface FormErrors {
   serviceId?: string
   date?: string
   time?: string
-  phone?: string
 }
 
 export function Appointment() {
@@ -43,6 +45,7 @@ export function Appointment() {
   const [time, setTime] = useState('')
   const [phone, setPhone] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
+  const headingRef = useStageFocus(stage)
 
   const selectedService = services.find((s) => s.id === serviceId) ?? null
   const min = todayISO()
@@ -74,8 +77,6 @@ export function Appointment() {
     if (!date) next.date = 'Please select a date.'
     else if (date < min) next.date = 'Please choose today or a future date.'
     if (!time) next.time = 'Please select an available time slot.'
-    if (!PHONE_PATTERN.test(phone.trim()))
-      next.phone = 'Enter a valid Sri Lankan mobile number, e.g. 077 123 4567.'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -84,7 +85,7 @@ export function Appointment() {
     e.preventDefault()
     if (!validate() || !selectedService) return
     setReference(generateReference('APT'))
-    setStage('payment')
+    setStage('verify')
   }
 
   const handlePaymentPreviewDone = () => {
@@ -96,7 +97,7 @@ export function Appointment() {
       serviceName: selectedService.name,
       date,
       time,
-      phone: phone.trim(),
+      phone: normalizeSriLankanMobile(phone) ?? phone.trim(),
       price: selectedService.price,
       deposit,
       remaining,
@@ -123,7 +124,9 @@ export function Appointment() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl">Booking Preview</h1>
+          <h1 ref={headingRef} tabIndex={-1} className="text-3xl outline-none">
+            Booking Preview
+          </h1>
           <span className="rounded-full bg-cream px-3 py-1 text-xs font-semibold uppercase tracking-wide text-burgundy">
             Ref: {reference}
           </span>
@@ -146,7 +149,7 @@ export function Appointment() {
             </div>
             <div className="flex justify-between">
               <dt className="text-mauve">Dialog Mobile Number</dt>
-              <dd className="font-semibold text-burgundy">{previewBooking.phone}</dd>
+              <dd className="font-semibold text-burgundy">{formatMobile(previewBooking.phone)}</dd>
             </div>
           </dl>
           <div className="mt-4 space-y-2 border-t border-gold-light/30 pt-4 text-sm">
@@ -184,7 +187,8 @@ export function Appointment() {
     )
   }
 
-  if (stage === 'payment' && selectedService) {
+  if ((stage === 'verify' || stage === 'payment') && selectedService) {
+    const onVerifyStep = stage === 'verify'
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 sm:px-8">
         <button
@@ -194,7 +198,12 @@ export function Appointment() {
         >
           ← Back to Details
         </button>
-        <h1 className="mt-4 text-3xl">Advance Payment</h1>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
+          {onVerifyStep ? 'Step 1 of 2 · Verify your number' : 'Step 2 of 2 · Scan and pay'}
+        </p>
+        <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl outline-none">
+          Advance Payment
+        </h1>
         <div className="mt-6 rounded-2xl bg-cream p-6 text-sm">
           <div className="flex justify-between">
             <span>{selectedService.name}</span>
@@ -216,17 +225,26 @@ export function Appointment() {
           </div>
         </div>
         <div className="mt-8">
-          <QrDemo
-            amountLabel="Advance amount due"
-            amount={deposit}
-            reference={reference}
-            onScanned={() => setPaymentModalOpen(true)}
-            disabled={paymentModalOpen}
-          />
+          {onVerifyStep ? (
+            <MobileVerification
+              phone={phone}
+              onPhoneChange={setPhone}
+              onVerified={() => setStage('payment')}
+            />
+          ) : (
+            <DialogPayQr
+              amountLabel="Advance amount due"
+              amount={deposit}
+              reference={reference}
+              onScanned={() => setPaymentModalOpen(true)}
+              disabled={paymentModalOpen}
+            />
+          )}
         </div>
         <PaymentProcessingModal
           open={paymentModalOpen}
           amount={deposit}
+          summaryLabel="View booking summary"
           onDone={handlePaymentPreviewDone}
         />
       </div>
@@ -237,7 +255,9 @@ export function Appointment() {
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-8">
       <div className="text-center">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gold">Book Now</p>
-        <h1 className="mt-4 text-3xl sm:text-4xl">Make an Appointment</h1>
+        <h1 ref={headingRef} tabIndex={-1} className="mt-4 text-3xl outline-none sm:text-4xl">
+          Make an Appointment
+        </h1>
         <p className="mx-auto mt-4 max-w-xl text-balance">
           Choose your service, pick a convenient date and time, and secure your booking with a
           small advance payment.
@@ -347,34 +367,6 @@ export function Appointment() {
             </p>
           )}
         </fieldset>
-
-        <div>
-          <label htmlFor="phone" className="block text-sm font-semibold text-burgundy">
-            Dialog mobile number
-          </label>
-          <input
-            id="phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => {
-              setPhone(e.target.value)
-              clearError('phone')
-            }}
-            placeholder="e.g. 077 123 4567"
-            aria-invalid={Boolean(errors.phone)}
-            aria-describedby={errors.phone ? 'phone-error' : 'phone-hint'}
-            className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm focus:border-burgundy focus:outline-none"
-          />
-          {errors.phone ? (
-            <p id="phone-error" className="mt-1 text-xs text-red-600">
-              {errors.phone}
-            </p>
-          ) : (
-            <p id="phone-hint" className="mt-1 text-xs text-mauve">
-              Used only to complete your payment through the Dialog Pay QR flow.
-            </p>
-          )}
-        </div>
 
         <button
           type="submit"

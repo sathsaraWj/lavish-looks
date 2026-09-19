@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { QrDemo } from '../components/QrDemo'
+import { DialogPayQr } from '../components/DialogPayQr'
 import storefrontPhoto from '../assets/salon/storefront.jpg'
 import vanityStationPhoto from '../assets/salon/vanity-station.jpg'
 import interiorPhoto from '../assets/salon/interior.jpg'
@@ -209,7 +209,7 @@ export function Home() {
             </div>
           </div>
           <div className="mx-auto w-full max-w-sm">
-            <QrDemo
+            <DialogPayQr
               amountLabel="Sample amount due"
               amount={3500}
               reference="PREVIEW-0001"

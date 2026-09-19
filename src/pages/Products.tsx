@@ -4,15 +4,23 @@ import { productCategories, products, type Product } from '../data/products'
 import { districts, getDeliveryFee } from '../data/delivery'
 import { useCart } from '../context/CartContext'
 import { formatLKR } from '../lib/format'
-import { EMAIL_PATTERN, PHONE_PATTERN, POSTAL_CODE_PATTERN, generateReference } from '../lib/validation'
+import {
+  EMAIL_PATTERN,
+  POSTAL_CODE_PATTERN,
+  generateReference,
+  normalizeSriLankanMobile,
+} from '../lib/validation'
+import { MOBILE_ERROR } from '../lib/otp'
+import { useStageFocus } from '../lib/useStageFocus'
 import { ProductCard } from '../components/ProductCard'
-import { QrDemo } from '../components/QrDemo'
+import { DialogPayQr } from '../components/DialogPayQr'
+import { MobileVerification } from '../components/MobileVerification'
 import { PaymentProcessingModal } from '../components/PaymentProcessingModal'
 import { PrototypeDisclosure } from '../components/PrototypeDisclosure'
 
 const categoryTabs = ['All', ...productCategories] as const
 type PaymentMethod = 'qr' | 'cod'
-type Stage = 'shop' | 'checkout' | 'payment' | 'preview'
+type Stage = 'shop' | 'checkout' | 'verify' | 'payment' | 'preview'
 
 interface CustomerDetails {
   fullName: string
@@ -65,8 +73,10 @@ export function Products() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+  const [dialogPhone, setDialogPhone] = useState('')
   const [reference, setReference] = useState('')
   const [order, setOrder] = useState<OrderSummary | null>(null)
+  const headingRef = useStageFocus(stage)
 
   const visibleProducts = useMemo(() => {
     const byCategory = category === 'All' ? products : products.filter((p) => p.category === category)
@@ -101,8 +111,7 @@ export function Products() {
     const next: FormErrors = {}
     if (!customer.fullName.trim() || customer.fullName.trim().length < 2)
       next.fullName = 'Please enter your full name.'
-    if (!PHONE_PATTERN.test(customer.phone.trim()))
-      next.phone = 'Enter a valid Sri Lankan mobile number, e.g. 077 123 4567.'
+    if (!normalizeSriLankanMobile(customer.phone)) next.phone = MOBILE_ERROR
     if (!EMAIL_PATTERN.test(customer.email.trim())) next.email = 'Enter a valid email address.'
     if (!customer.street.trim()) next.street = 'Please enter your street address.'
     if (!customer.city.trim()) next.city = 'Please enter your city.'
@@ -134,10 +143,13 @@ export function Products() {
     const ref = generateReference('ORD')
     setReference(ref)
     if (paymentMethod === 'cod') {
+      // Cash on Delivery skips mobile verification and the QR payment entirely.
       setOrder(buildOrder('cod', ref))
       setStage('preview')
     } else {
-      setStage('payment')
+      // Pre-fill the delivery phone as a convenience; the customer can change it before requesting a code.
+      setDialogPhone((prev) => prev || customer.phone.trim())
+      setStage('verify')
     }
   }
 
@@ -152,6 +164,7 @@ export function Products() {
     setCustomer(emptyCustomer)
     setPaymentMethod('')
     setErrors({})
+    setDialogPhone('')
     setReference('')
     setOrder(null)
     setStage('shop')
@@ -162,7 +175,7 @@ export function Products() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 sm:px-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl">Order Preview</h1>
+          <h1 ref={headingRef} tabIndex={-1} className="text-3xl outline-none">Order Preview</h1>
           <span className="rounded-full bg-cream px-3 py-1 text-xs font-semibold uppercase tracking-wide text-burgundy">
             Ref: {order.reference}
           </span>
@@ -203,7 +216,7 @@ export function Products() {
               <span>{formatLKR(order.deliveryFee)}</span>
             </div>
             <div className="flex justify-between border-t border-gold-light/30 pt-2 font-serif text-lg font-semibold text-burgundy">
-              <span>{order.paymentMethod === 'cod' ? 'Amount Due on Delivery' : 'Total'}</span>
+              <span>{order.paymentMethod === 'cod' ? 'Amount due on delivery' : 'Total'}</span>
               <span>{formatLKR(order.total)}</span>
             </div>
           </div>
@@ -237,8 +250,9 @@ export function Products() {
     )
   }
 
-  // ---------- QR Payment ----------
-  if (stage === 'payment') {
+  // ---------- Mobile verification + QR payment ----------
+  if (stage === 'verify' || stage === 'payment') {
+    const onVerifyStep = stage === 'verify'
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 sm:px-8">
         <button
@@ -248,23 +262,37 @@ export function Products() {
         >
           ← Back to Details
         </button>
-        <h1 className="mt-4 text-3xl">Pay with Dialog Pay QR</h1>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
+          {onVerifyStep ? 'Step 1 of 2 · Verify your number' : 'Step 2 of 2 · Scan and pay'}
+        </p>
+        <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl outline-none">
+          Pay with Dialog Pay QR
+        </h1>
         <p className="mt-2 text-sm text-mauve">
           Order reference <span className="font-semibold text-burgundy">{reference}</span> · Delivering
-          to {customer.district}
+          to {customer.district} · Total {formatLKR(total)}
         </p>
         <div className="mt-8">
-          <QrDemo
-            amountLabel="Total due"
-            amount={total}
-            reference={reference}
-            onScanned={() => setPaymentModalOpen(true)}
-            disabled={paymentModalOpen}
-          />
+          {onVerifyStep ? (
+            <MobileVerification
+              phone={dialogPhone}
+              onPhoneChange={setDialogPhone}
+              onVerified={() => setStage('payment')}
+            />
+          ) : (
+            <DialogPayQr
+              amountLabel="Total due"
+              amount={total}
+              reference={reference}
+              onScanned={() => setPaymentModalOpen(true)}
+              disabled={paymentModalOpen}
+            />
+          )}
         </div>
         <PaymentProcessingModal
           open={paymentModalOpen}
           amount={total}
+          summaryLabel="View order summary"
           onDone={handlePaymentPreviewDone}
         />
       </div>
@@ -276,7 +304,7 @@ export function Products() {
     if (cartDetails.length === 0) {
       return (
         <div className="mx-auto max-w-xl px-4 py-24 text-center sm:px-8">
-          <h1 className="text-3xl">Your Cart is Empty</h1>
+          <h1 ref={headingRef} tabIndex={-1} className="text-3xl outline-none">Your Cart is Empty</h1>
           <p className="mt-3 text-mauve">Add some products before proceeding to checkout.</p>
           <button
             type="button"
@@ -298,7 +326,7 @@ export function Products() {
         >
           ← Back to Cart
         </button>
-        <h1 className="mt-4 text-3xl">Checkout</h1>
+        <h1 ref={headingRef} tabIndex={-1} className="mt-4 text-3xl outline-none">Checkout</h1>
 
         <form className="mt-8 grid gap-10 lg:grid-cols-[1fr_360px]" onSubmit={handleSubmitCheckout} noValidate>
           <div className="space-y-10">
@@ -570,7 +598,7 @@ export function Products() {
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-8">
       <div className="text-center">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gold">Shop</p>
-        <h1 className="mt-4 text-3xl sm:text-4xl">Salon &amp; Beauty Products</h1>
+        <h1 ref={headingRef} tabIndex={-1} className="mt-4 text-3xl outline-none sm:text-4xl">Salon &amp; Beauty Products</h1>
         <p className="mx-auto mt-4 max-w-xl text-balance">
           Bring the salon home with the same premium products our stylists use.
         </p>
